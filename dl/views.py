@@ -322,17 +322,19 @@ from django.db.models import Q
 @user_passes_test(is_super_admin)
 def published_article(request, journal_id):
     journal = get_object_or_404(Journal, id=journal_id)
-    volumes = Volume.objects.filter(journal=journal)
-    issues = Issue.objects.filter(volume__journal=journal)
     
-    selected_volume = request.GET.get('volume')
-    selected_issue = request.GET.get('issue')
+    search_query = request.GET.get('search', '').strip()
 
     filter_criteria = Q(issue__volume__journal=journal)
-    if selected_volume  and selected_volume != 'None':
-        filter_criteria &= Q(issue__volume_id=selected_volume)
-    if selected_issue and selected_issue != 'None':
-        filter_criteria &= Q(issue_id=selected_issue)
+    
+    if search_query:
+        filter_criteria &= (
+            Q(title__icontains=search_query) |
+            Q(author__icontains=search_query) |
+            Q(accepted_submission__corrected_title__icontains=search_query) |
+            Q(accepted_submission__submission__author__first_name__icontains=search_query) |
+            Q(accepted_submission__submission__author__last_name__icontains=search_query)
+        )
 
     articles = Published_article.objects.filter(filter_criteria).select_related('issue__volume').all()
     
@@ -360,10 +362,7 @@ def published_article(request, journal_id):
 
     context = {
         'articles': articles,
-        'volumes': volumes,
-        'issues': issues,
-        'selected_volume': selected_volume,
-        'selected_issue': selected_issue,
+        'search_query': search_query,
         'journal': journal,
     }
     return render(request, 'published_article.html', context)
