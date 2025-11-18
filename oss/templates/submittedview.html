@@ -246,33 +246,74 @@
             $('#submission_id').val(submissionId);  // Set the hidden input with the submission ID
         });
 
-        // Handle Correction Comments link click
+        // Handle Correction / Reviewer Comments link click
         $(document).on('click', '.correction-comments-link', function(e) {
             e.preventDefault();
             var submissionId = $(this).data('submission-id');
-            
-            $.ajax({
-                url: "{% url 'get_correction_comments' %}",
-                data: {
-                    'submission_id': submissionId
-                },
-                success: function(data) {
+
+            var correctionUrl = "{% url 'get_correction_comments' %}";
+            var reviewerUrl = "{% url 'get_reviewer_details' %}";
+
+            // Clear and show loading state
+            $('#correctionCommentsText').html('Loading...');
+            $('#correctionCommentsDate').text('');
+            $('#correctionCommentsDueDate').text('');
+            $('#correctionCommentsContent').hide();
+            $('#noCorrectionComments').hide();
+
+            // Fetch correction comments (for date and due date)
+            $.get(correctionUrl, { submission_id: submissionId })
+                .done(function(data) {
                     if (data.has_comments) {
-                        $('#correctionCommentsText').text(data.correction_comments);
-                        $('#correctionCommentsDate').text(data.date);
-                        $('#correctionCommentsDueDate').text(data.due_date);
+                        $('#correctionCommentsText').text(data.correction_comments || '');
+                        $('#correctionCommentsDate').text(data.date || '');
+                        $('#correctionCommentsDueDate').text(data.due_date || '');
                         $('#correctionCommentsContent').show();
                         $('#noCorrectionComments').hide();
                     } else {
-                        $('#correctionCommentsContent').hide();
-                        $('#noCorrectionComments').show();
+                        // keep placeholder; may be filled by reviewer comments below
+                        $('#correctionCommentsText').html('');
+                        $('#correctionCommentsDate').text('');
+                        $('#correctionCommentsDueDate').text('');
                     }
+                })
+                .fail(function() {
+                    // ignore, reviewer data may still appear
+                });
+
+            // Fetch reviewer comments and append them to the modal content
+            $.get(reviewerUrl, { submission_id: submissionId })
+                .done(function(data) {
+                    if (data.has_comments && Array.isArray(data.reviews) && data.reviews.length > 0) {
+                        var html = '';
+                        data.reviews.forEach(function(rc) {
+                            var reviewer = rc.reviewer || 'Anonymous';
+                            var recommendation = rc.recommendation ? ' - ' + rc.recommendation : '';
+                            var submitted_on = rc.submitted_on ? (new Date(rc.submitted_on)).toLocaleString() : '';
+                            var comments = rc.comments || '';
+
+                            html += '<div style="margin-bottom:8px;border-left:3px solid #e9ecef;padding-left:8px;">';
+                            html += '<strong>' + $('<div/>').text(reviewer).html() + '</strong>' + recommendation;
+                            html += '<div style="white-space:pre-wrap;margin-top:4px;">' + $('<div/>').text(comments).html() + '</div>';
+                            if (submitted_on) {
+                                html += '<div class="text-muted" style="font-size:0.8em;margin-top:4px;">Submitted: ' + submitted_on + '</div>';
+                            }
+                            html += '</div>';
+                        });
+
+                        // If correction comments already filled the text, append; otherwise set
+                        var existingHtml = $('#correctionCommentsText').html() || '';
+                        $('#correctionCommentsText').html(existingHtml + html);
+                        $('#correctionCommentsContent').show();
+                        $('#noCorrectionComments').hide();
+                    }
+                })
+                .fail(function() {
+                    // ignore
+                })
+                .always(function() {
                     $('#correctionCommentsModal').modal('show');
-                },
-                error: function(xhr, status, error) {
-                    alert("An error occurred while fetching correction comments: " + error);
-                }
-            });
+                });
         });
 
     </script>

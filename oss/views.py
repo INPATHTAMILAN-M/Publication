@@ -1779,16 +1779,55 @@ def submit_recommendation(request):
 def get_reviewer_details(request):
     submission_id = request.GET.get('submission_id')
     reviewer_id = request.GET.get('reviewer_id')
-    
-    try:
-        submission_reviewer = Submission_Reviewer.objects.get(submission_id=submission_id, reviewer_id=reviewer_id)
-        data = {
-            'review_recommendation': submission_reviewer.get_review_recommendation_display(),
-            'review_comments': submission_reviewer.review_comments
-        }
-        return JsonResponse(data)
-    except Submission_Reviewer.DoesNotExist:
-        return JsonResponse({'error': 'Reviewer not found'}, status=404)
+
+    if not submission_id:
+        return JsonResponse({'error': 'submission_id is required'}, status=400)
+
+    # If a specific reviewer_id is provided, return that review
+    if reviewer_id:
+        try:
+            submission_reviewer = Submission_Reviewer.objects.get(submission_id=submission_id, reviewer_id=reviewer_id)
+            try:
+                reviewer_name = submission_reviewer.reviewer.user.get_full_name()
+            except Exception:
+                reviewer_name = getattr(submission_reviewer.reviewer, 'name', '') or getattr(submission_reviewer.reviewer, 'email', '') or ''
+
+            data = {
+                'review_recommendation': submission_reviewer.get_review_recommendation_display() if hasattr(submission_reviewer, 'get_review_recommendation_display') else getattr(submission_reviewer, 'review_recommendation', None),
+                'review_comments': submission_reviewer.review_comments,
+                'submitted_on': getattr(submission_reviewer, 'submitted_on', None),
+                'reviewer': reviewer_name,
+            }
+            return JsonResponse(data)
+        except Submission_Reviewer.DoesNotExist:
+            return JsonResponse({'error': 'Reviewer not found'}, status=404)
+
+    # Otherwise, aggregate all reviews for the submission and return them
+    reviews_qs = Submission_Reviewer.objects.filter(submission_id=submission_id)
+    reviews = []
+    for r in reviews_qs:
+        try:
+            reviewer_name = r.reviewer.user.get_full_name()
+        except Exception:
+            reviewer_name = getattr(r.reviewer, 'name', '') or getattr(r.reviewer, 'email', '') or ''
+
+        recommendation = None
+        if hasattr(r, 'get_review_recommendation_display'):
+            try:
+                recommendation = r.get_review_recommendation_display()
+            except Exception:
+                recommendation = getattr(r, 'review_recommendation', None)
+        else:
+            recommendation = getattr(r, 'review_recommendation', None)
+
+        reviews.append({
+            'reviewer': reviewer_name,
+            'comments': r.review_comments,
+            'recommendation': recommendation,
+            'submitted_on': getattr(r, 'submitted_on', None),
+        })
+
+    return JsonResponse({'has_comments': bool(reviews), 'reviews': reviews})
 
 def get_correction_comments(request):
     submission_id = request.GET.get('submission_id')
