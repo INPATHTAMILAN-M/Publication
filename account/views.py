@@ -89,10 +89,34 @@ def user_management(request):
     page_number = request.GET.get('page')
     users = paginator.get_page(page_number)
     
+    # Prepare user details for tooltip
+    user_details = {}
+    for user in users:
+        details = {
+            'email': user.email,
+            'groups': ', '.join([group.name for group in user.groups.all()]),
+        }
+        
+        # Add Author-specific details
+        if hasattr(user, 'author_profile'):
+            details['institution'] = user.author_profile.institution
+            details['mobile_no'] = user.author_profile.mobile_no
+            details['city'] = user.author_profile.city
+            details['country'] = user.author_profile.country.country if user.author_profile.country else 'N/A'
+            details['orcid_id'] = user.author_profile.orcid_id
+        
+        # Add Editor-specific details
+        if hasattr(user, 'editor'):
+            details['affiliation'] = user.editor.affliation
+            details['mobile_number'] = user.editor.mobile_number
+        
+        user_details[user.username] = details
+    
     journal_usernames = list(User.objects.filter(groups__name__in=['AE', 'EIC']).values_list('username', flat=True))
     dates = Date.objects.all()
     context = {
         'users': users,
+        'user_details': json.dumps(user_details),
         'journal_usernames': json.dumps(journal_usernames), 
         'journals' : Journal.objects.all() ,# Convert list to JSON string
         'dates': dates,
@@ -341,8 +365,31 @@ def search_users(request):
     users = User.objects.filter(first_name__icontains=query) | User.objects.filter(username__icontains=query)
     users_data = list(users.values('first_name', 'last_name', 'username', 'email', 'is_superuser'))
 
+    # Prepare user details for tooltip
+    user_details = {}
+    for user in users:
+        details = {
+            'email': user.email,
+            'groups': ', '.join([group.name for group in user.groups.all()]),
+        }
+        
+        # Add Author-specific details
+        if hasattr(user, 'author_profile'):
+            details['institution'] = user.author_profile.institution
+            details['mobile_no'] = user.author_profile.mobile_no
+            details['city'] = user.author_profile.city
+            details['country'] = user.author_profile.country.country if user.author_profile.country else 'N/A'
+            details['orcid_id'] = user.author_profile.orcid_id
+        
+        # Add Editor-specific details
+        if hasattr(user, 'editor'):
+            details['affiliation'] = user.editor.affliation
+            details['mobile_number'] = user.editor.mobile_number
+        
+        user_details[user.username] = details
+
     journal_usernames = list(User.objects.filter(groups__name__in=['AE', 'EIC']).values_list('username', flat=True))
-    return JsonResponse({'users': users_data, 'journal_usernames': journal_usernames})
+    return JsonResponse({'users': users_data, 'user_details': user_details, 'journal_usernames': journal_usernames})
 
 
 # --------------------------------------------------------------------------------------Date Settings---------------------------------------------------------------------------------------
