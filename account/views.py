@@ -435,6 +435,8 @@ def index(request):
 
     # Get the latest volume for the JCS journal
     latest_volume = Volume.objects.filter(journal=jcs_journal).order_by('-year', '-volume').first()
+    latest_issue = None
+    latest_articles = []
     
     if latest_volume:
         # Get the latest issue for the latest volume
@@ -443,10 +445,6 @@ def index(request):
         if latest_issue:
             # Get the latest published articles for the latest issue
             latest_articles = Published_article.objects.filter(issue=latest_issue).order_by('-id')
-        else:
-            latest_articles = []
-    else:
-        latest_articles = []
     user = request.user
     has_ae_or_eic = user.groups.filter(name__in=['AE', 'EIC']).exists()
     has_author_or_reviewer = user.groups.filter(name__in=['Author', 'Reviewer']).exists()
