@@ -70,6 +70,7 @@
                     <td>{{ accepted_submission.corrected_title }}</td>
                     <td>
                         <button class="btn btn-primary publish-button" data-submission-id="{{ accepted_submission.id }}">Publish</button>
+                        <button class="btn btn-danger remove-button ms-2" data-submission-id="{{ accepted_submission.id }}">Remove</button>
                     </td>
                 </tr>
             {% empty %}
@@ -284,6 +285,36 @@
             const submissionId = $(this).data('submission-id');
             $('#submission-id').val(submissionId);
             $('#publishModal').modal('show');
+        });
+
+        // Remove accepted submission handler
+        $(document).on('click', '.remove-button', function() {
+            const btn = $(this);
+            const submissionId = btn.data('submission-id');
+            if (!confirm('Are you sure you want to remove this accepted submission?')) {
+                return;
+            }
+            const csrfToken = '{{ csrf_token }}';
+            $.ajax({
+                url: "{% url 'remove_accepted_submission' %}",
+                type: 'POST',
+                data: {
+                    accepted_submission_id: submissionId,
+                    csrfmiddlewaretoken: csrfToken,
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message || 'Submission removed.');
+                        btn.closest('tr').remove();
+                    } else {
+                        alert('Failed to remove submission: ' + (response.message || 'Unknown error.'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error);
+                    alert('An error occurred while removing the submission.');
+                }
+            });
         });
 
         $('#new-article-button').click(function() {

@@ -17,6 +17,7 @@ urlpatterns = [
     path('get_issues_by_volume/', get_issues_by_volume, name='get_issues_by_volume'),
     #direct article publish
     path('publish_new_article/', publish_new_article, name='publish_new_article'),
+    path('remove_accepted_submission/', remove_accepted_submission, name='remove_accepted_submission'),
     #Manuscript in processing
     path('manuscript-processing/<int:journal_id>/', manuscript_processing, name='manuscript_processing'),
     #Published article

@@ -137,7 +137,7 @@ def save_issue(request):
 #***********************************************************
 @login_required
 @user_passes_test(is_super_admin)
-def article_publish_page(request, journal_id):
+def article_publish_page(request, journal_id): 
     journal = get_object_or_404(Journal, id=journal_id)
     accepted_submissions = Accepted_Submission.objects.filter(
         submission__journal=journal,
@@ -388,3 +388,57 @@ def remove_article(request, article_id):
         return redirect('published_article', journal_id=journal_id)
     
     return JsonResponse({'success': False, 'message': 'Invalid request.'})
+
+
+@login_required
+@user_passes_test(is_super_admin)
+def remove_accepted_submission(request):
+    """
+    AJAX POST endpoint to remove an Accepted_Submission and its associated Submission.
+    Expects POST param: accepted_submission_id
+    Returns JSON: {'success': True/False, 'message': '...'}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+
+    accepted_submission_id = request.POST.get('accepted_submission_id') or request.POST.get('id')
+    if not accepted_submission_id:
+        return JsonResponse({'success': False, 'message': 'No accepted_submission_id provided.'}, status=400)
+
+    try:
+        accepted_submission = get_object_or_404(Accepted_Submission, id=accepted_submission_id)
+        submission = accepted_submission.submission
+
+        # Attempt to delete uploaded files to avoid orphaned files
+        try:
+            if accepted_submission.corrected_file:
+                accepted_submission.corrected_file.delete(save=False)
+        except Exception:
+            logger.exception('Failed deleting corrected_file')
+
+        try:
+            if accepted_submission.typeset_file:
+                accepted_submission.typeset_file.delete(save=False)
+        except Exception:
+            logger.exception('Failed deleting typeset_file')
+
+        # Delete the Accepted_Submission record
+        accepted_submission.delete()
+
+        # Also delete the underlying Submission if it exists and is safe to delete
+        try:
+            # remove submission final file if any
+            if hasattr(submission, 'final_file') and submission.final_file:
+                try:
+                    submission.final_file.delete(save=False)
+                except Exception:
+                    logger.exception('Failed deleting submission final_file')
+            submission.delete()
+        except Exception:
+            # If submission cannot be deleted for any reason, log but still return success for accepted_submission removal
+            logger.exception('Failed deleting Submission related to Accepted_Submission')
+
+        return JsonResponse({'success': True, 'message': 'Accepted submission and linked submission removed.'})
+    except Exception as e:
+        logger.exception(f'Error removing accepted submission id={accepted_submission_id}: {str(e)}')
+        return JsonResponse({'success': False, 'message': str(e)})
