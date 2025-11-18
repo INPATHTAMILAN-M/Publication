@@ -11,6 +11,7 @@
                     <th scope="col">File</th>
                     <th scope="col">Submitted On</th>
                     <th scope="col">Decisioned on</th>
+                    <th scope="col">Comments </th>
                 </tr>
             </thead>
             <tbody>
@@ -36,6 +37,9 @@
                     </td>
                     <td>{{ submission.submitted_on|date:"d-M-Y" }}</td>
                     <td>{{ submission.decissioned_on|date:"d-M-Y" }}</td>
+                    <td>
+                        <a href="#" class="correction-comments-link" data-submission-id="{{ submission.id }}">View Correction Comments</a>
+                    </td>
                 </tr>
                 {% empty %}
                     <div class="author-card-step-two">

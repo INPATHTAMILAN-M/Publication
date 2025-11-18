@@ -66,6 +66,7 @@ urlpatterns = [
     path('reviewed_manuscripts/', Reviewed_Manuscripts, name='reviewed_manuscripts'),
     path('submit_review_comments/',submit_review_comments, name='submit_review_comments'),
     path('get_reviewer_details/',get_reviewer_details, name='get_reviewer_details'),
+    path('get_correction_comments/',get_correction_comments, name='get_correction_comments'),
 
     # -------------------------Associate Editor--------------------------------------------------------------------------------------------------------------------
     path('associate_editor/', associate_editor, name='associate_editor'),

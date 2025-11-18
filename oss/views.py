@@ -1789,6 +1789,21 @@ def get_reviewer_details(request):
         return JsonResponse(data)
     except Submission_Reviewer.DoesNotExist:
         return JsonResponse({'error': 'Reviewer not found'}, status=404)
+
+def get_correction_comments(request):
+    submission_id = request.GET.get('submission_id')
+    
+    try:
+        correction_comment = Correction_Comments.objects.filter(submission_id=submission_id).latest('date')
+        data = {
+            'has_comments': True,
+            'correction_comments': correction_comment.correction_commments,
+            'date': correction_comment.date.strftime('%d-%b-%Y'),
+            'due_date': correction_comment.due_date.strftime('%d-%b-%Y')
+        }
+        return JsonResponse(data)
+    except Correction_Comments.DoesNotExist:
+        return JsonResponse({'has_comments': False})
 # -----------Manuscripts under review-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @login_required
 @user_passes_test(is_ae)
