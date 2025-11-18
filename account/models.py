@@ -16,7 +16,7 @@ class Country(models.Model):
         return self.country
 
 class Author(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)  
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='author_profile')  
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
     institution = models.CharField(max_length=255)
     address = models.TextField()
