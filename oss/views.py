@@ -1581,13 +1581,13 @@ def submit_review_comments(request):
                 logger.error("No AE (editor) assigned to this submission.")
                 return JsonResponse({'status': 'Error', 'message': 'No AE (editor) assigned to this submission.'}, status=500)
 
-            # send_email(
-            #     to_email=editor.email,
-            #     subject='Invitation Completed',
-            #     template_name='email_templates/reviewer_completed.html',
-            #     user=editor,
-            #     context={'submission': submission, 'reviewer': user, 'editor': editor}
-            # )
+            send_email(
+                to_email=editor.email,
+                subject='Invitation Completed',
+                template_name='email_templates/reviewer_completed.html',
+                user=editor,
+                context={'submission': submission, 'reviewer': user, 'editor': editor}
+            )
 
             send_email(
                 to_email=submission_reviewer.submission.author.email,
