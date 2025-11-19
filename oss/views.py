@@ -1721,7 +1721,7 @@ def send_invitation(request):
             if not submission_id or not reviewer_ids:
                 return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
 
-            reviewers = User.objects.filter(author__id__in=reviewer_ids)
+            reviewers = User.objects.filter(id__in=reviewer_ids)
             for reviewer in reviewers:
                 # Check if invitation already exists
                 if Reviewer_Invitation.objects.filter(user=reviewer, submission=submission).exists():

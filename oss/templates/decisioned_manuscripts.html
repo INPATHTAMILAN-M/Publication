@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 {% block content %}
 <section class="job-list-section pt-60 pb-60">
     <div class="container-fluid">
@@ -48,6 +49,7 @@
                                     <th scope="col">Status</th>
                                     <th scope="col">File</th>
                                     <th scope="col">Submitted on</th>
+                                    <th scope="col">Comments</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -65,6 +67,9 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ submission.submitted_on }}</td>
+                                    <td>
+                                        <a href="#" class="correction-comments-link" data-submission-id="{{ submission.id }}">Reviewer Comments</a>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -88,6 +93,91 @@
                             {% endif %}
                         </span>
                     </div>
+                    <!-- Aggregated Reviewer Comments Modal -->
+                    <div class="modal fade" id="correctionCommentsModal" tabindex="-1" aria-labelledby="correctionCommentsModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="correctionCommentsModalLabel">Reviewer Comments</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div id="correctionCommentsContent">
+                                        <div id="correctionCommentsText"></div>
+                                    </div>
+                                    <div id="noCorrectionComments" style="display:none;">
+                                        <p>No reviewer comments available for this submission.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                    (function(){
+                        document.addEventListener('click', function(e){
+                            var t = e.target;
+                            while(t && !t.classList && t.parentNode){ t = t.parentNode; }
+                            if(!t) return;
+                            if(t.classList && t.classList.contains('correction-comments-link')){
+                                e.preventDefault();
+                                var submissionId = t.getAttribute('data-submission-id');
+                                if(!submissionId) return;
+
+                                var params = new URLSearchParams({ submission_id: submissionId });
+                                fetch('{% url "get_reviewer_details" %}?' + params.toString(), { credentials: 'same-origin' })
+                                    .then(function(resp){ if(!resp.ok) throw new Error('Network error'); return resp.json(); })
+                                    .then(function(data){
+                                        if(data.has_comments && Array.isArray(data.reviews) && data.reviews.length > 0){
+                                            var html = '';
+                                            data.reviews.forEach(function(rc){
+                                                var reviewer = rc.reviewer || 'Anonymous';
+                                                var recommendation = rc.recommendation ? ' - ' + rc.recommendation : '';
+                                                var submitted_on = rc.submitted_on ? (new Date(rc.submitted_on)).toLocaleString() : '';
+                                                var comments = rc.comments || '';
+
+                                                html += '<div style="margin-bottom:8px;border-left:3px solid #e9ecef;padding-left:8px;">';
+                                                html += '<strong>' + escapeHtml(reviewer) + '</strong>' + escapeHtml(recommendation);
+                                                html += '<div style="white-space:pre-wrap;margin-top:4px;">' + escapeHtml(comments) + '</div>';
+                                                if(submitted_on){ html += '<div class="text-muted" style="font-size:0.8em;margin-top:4px;">Submitted: ' + escapeHtml(submitted_on) + '</div>'; }
+                                                html += '</div>';
+                                            });
+
+                                            document.getElementById('correctionCommentsText').innerHTML = html;
+                                            document.getElementById('correctionCommentsContent').style.display = '';
+                                            document.getElementById('noCorrectionComments').style.display = 'none';
+                                        } else {
+                                            document.getElementById('noCorrectionComments').style.display = '';
+                                            document.getElementById('correctionCommentsContent').style.display = 'none';
+                                        }
+
+                                        var modalEl = document.getElementById('correctionCommentsModal');
+                                        if(typeof bootstrap !== 'undefined' && bootstrap.Modal){
+                                            var modal = new bootstrap.Modal(modalEl);
+                                            modal.show();
+                                        } else if(window.jQuery){
+                                            $('#correctionCommentsModal').modal('show');
+                                        } else {
+                                            alert('Reviewer comments loaded');
+                                        }
+                                    }).catch(function(err){
+                                        console.error(err);
+                                        alert('Could not load reviewer comments.');
+                                    });
+                            }
+                        });
+
+                        function escapeHtml(str){
+                            if(!str) return '';
+                            return String(str)
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/\"/g, '&quot;')
+                                .replace(/'/g, '&#39;');
+                        }
+                    })();
+                    </script>
                 </div>
             </div>
         </div>
