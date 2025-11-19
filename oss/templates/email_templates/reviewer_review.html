@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <p>Dear Author,</p>
+    
+    <p>Your manuscript titled "<strong>{{ submission.title }}</strong>" (Manuscript ID: <strong>{{ submission.manuscript_id }}</strong>) has received a review.</p>
+    
+    <p><strong>Reviewer Recommendation:</strong></p>
+    <p>
+        {% if review_recommendation == 'A' %}
+            Accept
+        {% elif review_recommendation == 'R' %}
+            Reject
+        {% elif review_recommendation == 'MIN_R' %}
+            Minor Revision
+        {% elif review_recommendation == 'MAJ_R' %}
+            Major Revision
+        {% endif %}
+    </p>
+    
+    <p><strong>Reviewer Comments:</strong></p>
+    <p>{{ review_comments }}</p>
+    
+    <p>Please log in to your account to view the complete details.</p>
+    
+    <p>Best regards,</p>
+    <p>Editorial Team</p>
+</body>
+</html>
