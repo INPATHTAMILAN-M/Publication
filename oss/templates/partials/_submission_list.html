@@ -29,11 +29,21 @@
                     </td>
                     <td>{{ submission.article_status }}</td>
                     <td>
-                        {% if submission.final_file %}
-                            <a href="{{ submission.final_file.url }}" onclick="window.open(this.href, '_blank', 'toolbar=0,scrollbars=1,resizable=1,width=800,height=600'); return false;">View PDF</a>
-                        {% else %}
-                        --
-                    {% endif %}
+
+                        {# Files uploaded via Submission_Files relation - list all #}
+                        {% for f in submission.submission_files_set.all %}
+                            <div>
+                                {% if f.file_category %}
+                                    <small>{{ f.file_category.file_category }}:</small>
+                                {% endif %}
+                                <a href="{{ f.file.url }}" download>{{ f.file.name }}</a>
+                            </div>
+                        {% empty %}
+                            {# Show placeholder only if there are no files at all #}
+                            {% if not submission.final_file and not submission.additional_file and not submission.plag_report and not submission.copyright_file %}
+                                --
+                            {% endif %}
+                        {% endfor %}
                     </td>
                     <td>{{ submission.submitted_on|date:"d-M-Y" }}</td>
                     <td>{{ submission.decissioned_on|date:"d-M-Y" }}</td>

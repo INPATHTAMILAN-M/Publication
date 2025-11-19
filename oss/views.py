@@ -68,7 +68,7 @@ def Submittedview(request):
             'Awaiting for EIC Decision',
             'Awaiting for Revision',
             'Published',
-            ], author=request.user)
+            ], author=request.user).prefetch_related('submission_files_set')
     
     paginator = Paginator(submissions, 10)  # Show 10 submissions per page
     page_number = request.GET.get('page')
@@ -1377,11 +1377,45 @@ def decisioned_manuscripts(request):
     page_number = request.GET.get('page')
     submissions = paginator.get_page(page_number)
 
+    # Build a mapping of submission.id -> latest review info (reviewer name, recommendation, comments)
+    latest_reviews = {}
+    try:
+        from .models import Submission_Reviewer
+        for sub in submissions:
+            latest = Submission_Reviewer.objects.filter(submission=sub).exclude(review_comments__isnull=True).exclude(review_comments__exact='').order_by('-completion_on').first()
+            if latest:
+                try:
+                    reviewer_name = latest.reviewer.user.get_full_name()
+                except Exception:
+                    reviewer_name = getattr(latest.reviewer, 'name', '') or getattr(latest.reviewer, 'email', '') or ''
+
+                try:
+                    recommendation = latest.get_review_recommendation_display()
+                except Exception:
+                    recommendation = getattr(latest, 'review_recommendation', '')
+
+                # sanitize stored comments similarly to ensure escaped sequences and stray quotes are cleaned
+                comments = latest.review_comments or ''
+                try:
+                    comments = comments.replace('\\u000A', '\n').replace('\\n', '\n')
+                except Exception:
+                    pass
+                comments = comments.strip().strip("'")
+
+                latest_reviews[sub.id] = {
+                    'reviewer': reviewer_name,
+                    'recommendation': recommendation,
+                    'comments': comments,
+                }
+    except Exception:
+        latest_reviews = {}
+
     return render(request, 'decisioned_manuscripts.html', {
         'submissions': submissions,
         'all_statuses': all_statuses,
         'selected_status': selected_status,
         'search_term': search_term,
+        'latest_reviews': latest_reviews,
     })
 
 
@@ -1568,6 +1602,13 @@ def submit_review_comments(request):
             review_comments_html = request.POST.get('review_comments')
             soup = BeautifulSoup(review_comments_html, "html.parser")
             plain_text_comments = soup.get_text()
+            # Normalize escaped newline sequences that may arrive literal (e.g. "\\u000A" or "\\n")
+            try:
+                plain_text_comments = plain_text_comments.replace('\\u000A', '\n').replace('\\n', '\n')
+            except Exception:
+                pass
+            # Trim surrounding whitespace and strip stray leading/trailing single quotes
+            plain_text_comments = plain_text_comments.strip().strip("'")
             submission_reviewer.review_comments = plain_text_comments
             submission_reviewer.completion_on = now()
             submission_reviewer.request_status=Request_Status.objects.get(request_status='Submitted')
