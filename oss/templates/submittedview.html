@@ -163,23 +163,22 @@
         </section>
     </div>
 
-    <!-- Modal for Correction Comments -->
+    <!-- Modal for Reviewer Comments -->
     <div class="modal fade" id="correctionCommentsModal" tabindex="-1" role="dialog" aria-labelledby="correctionCommentsModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="correctionCommentsModalLabel">Correction Comments</h5>
+                    <h5 class="modal-title" id="correctionCommentsModalLabel">Reviewer Comments</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div id="correctionCommentsContent">
-                        <p><strong>Comments:</strong></p>
-                        <p id="correctionCommentsText"></p>
-                        <p><strong>Date:</strong> <span id="correctionCommentsDate"></span></p>
-                        <p><strong>Due Date:</strong> <span id="correctionCommentsDueDate"></span></p>
+                        <div id="correctionCommentsText"></div>
+                        <div id="correctionCommentsDate" style="display:none;"></div>
+                        <div id="correctionCommentsDueDate" style="display:none;"></div>
                     </div>
                     <div id="noCorrectionComments" style="display:none;">
-                        <p>No correction comments available for this submission.</p>
+                        <p>No reviewer comments available for this submission.</p>
                     </div>
                 </div>
             </div>
@@ -251,7 +250,6 @@
             e.preventDefault();
             var submissionId = $(this).data('submission-id');
 
-            var correctionUrl = "{% url 'get_correction_comments' %}";
             var reviewerUrl = "{% url 'get_reviewer_details' %}";
 
             // Clear and show loading state
@@ -261,27 +259,7 @@
             $('#correctionCommentsContent').hide();
             $('#noCorrectionComments').hide();
 
-            // Fetch correction comments (for date and due date)
-            $.get(correctionUrl, { submission_id: submissionId })
-                .done(function(data) {
-                    if (data.has_comments) {
-                        $('#correctionCommentsText').text(data.correction_comments || '');
-                        $('#correctionCommentsDate').text(data.date || '');
-                        $('#correctionCommentsDueDate').text(data.due_date || '');
-                        $('#correctionCommentsContent').show();
-                        $('#noCorrectionComments').hide();
-                    } else {
-                        // keep placeholder; may be filled by reviewer comments below
-                        $('#correctionCommentsText').html('');
-                        $('#correctionCommentsDate').text('');
-                        $('#correctionCommentsDueDate').text('');
-                    }
-                })
-                .fail(function() {
-                    // ignore, reviewer data may still appear
-                });
-
-            // Fetch reviewer comments and append them to the modal content
+            // Fetch reviewer comments only
             $.get(reviewerUrl, { submission_id: submissionId })
                 .done(function(data) {
                     if (data.has_comments && Array.isArray(data.reviews) && data.reviews.length > 0) {
@@ -301,15 +279,18 @@
                             html += '</div>';
                         });
 
-                        // If correction comments already filled the text, append; otherwise set
-                        var existingHtml = $('#correctionCommentsText').html() || '';
-                        $('#correctionCommentsText').html(existingHtml + html);
+                        $('#correctionCommentsText').html(html);
                         $('#correctionCommentsContent').show();
                         $('#noCorrectionComments').hide();
+                    } else {
+                        $('#noCorrectionComments').show();
+                        $('#correctionCommentsContent').hide();
                     }
                 })
                 .fail(function() {
-                    // ignore
+                    $('#correctionCommentsText').html('Error loading reviewer comments.');
+                    $('#correctionCommentsContent').show();
+                    $('#noCorrectionComments').hide();
                 })
                 .always(function() {
                     $('#correctionCommentsModal').modal('show');

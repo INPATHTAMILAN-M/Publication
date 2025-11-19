@@ -79,7 +79,7 @@ def Submittedview(request):
     
     admin_group = Group.objects.get(name='Admin Office')
 
-# Get the first user in the 'Admin Office' group (assuming there's only one admin)
+    # Get the first user in the 'Admin Office' group (assuming there's only one admin)
     admin_user = admin_group.user_set.first()
     
     return render(request, 'submittedview.html', {
@@ -89,7 +89,6 @@ def Submittedview(request):
     })
     
 from django.template.loader import render_to_string
-#New submission start
 @login_required
 @user_passes_test(is_author)
 def startnew(request):
@@ -1726,12 +1725,10 @@ def Manuscripts_Review_Report(request):
         'admin_email': admin_user.email if admin_user else '',
     })
 
-
 def get_reviewers_comments(request):
     if request.method == 'GET':
         comments = Submission_Reviewer.objects.filter(submission_id=request.GET.get('submission_id')).values_list('review_comments', flat=True)
         return JsonResponse({'comments': '\n'.join(comments)})
-
 
 from django.utils.html import strip_tags
 def submit_recommendation(request):
@@ -1775,7 +1772,6 @@ def submit_recommendation(request):
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
 
-    
 def get_reviewer_details(request):
     submission_id = request.GET.get('submission_id')
     reviewer_id = request.GET.get('reviewer_id')
@@ -1858,7 +1854,6 @@ def manuscripts_under_review(request):
 # --------------manuscrtipts in EIC  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @login_required
 @user_passes_test(is_ae)
-
 def manuscripts_eic(request):
     logged_in_user = request.user
     ae_assignments = AE_Assignment.objects.filter(user=logged_in_user).values_list('submission',flat=True).order_by('-id')
